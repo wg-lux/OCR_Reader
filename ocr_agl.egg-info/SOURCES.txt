@@ -1,0 +1,12 @@
+LICENSE
+pyproject.toml
+setup.cfg
+setup.py
+ocr_agl/__init__.py
+ocr_agl/app.py
+ocr_agl.egg-info/PKG-INFO
+ocr_agl.egg-info/SOURCES.txt
+ocr_agl.egg-info/dependency_links.txt
+ocr_agl.egg-info/top_level.txt
+ocr_agl/tests/request.py
+ocr_agl/tests/test.py
