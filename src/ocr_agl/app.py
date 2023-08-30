@@ -9,7 +9,6 @@ from medcat.vocab import Vocab
 from medcat.cdb import CDB
 from medcat.cat import CAT
 from medcat.meta_cat import MetaCAT
-import medcat
 import spacy
 import hunspell
 import re
@@ -26,11 +25,14 @@ pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
 tessdata_dir_config = '--tessdata-dir "/opt/homebrew/share/tessdata"'
 
 # Load vocab and cdb for medcat
-vocab = Vocab()
-vocab.load(path="dictionaries/vocab.dat")
-cdb = CDB()
-cdb.load(path="dictionaries/cdb.dat")
-cat = CAT(cdb=cdb, vocab=vocab)
+try:
+    vocab = Vocab()
+    vocab.load(path="dictionaries/vocab.dat")
+    cdb = CDB()
+    cdb.load(path="dictionaries/cdb.dat")
+    cat = CAT(cdb=cdb, vocab=vocab)
+except:
+    print("No Vocab and/or CDB for Medcat Usage provided. Please save them in src/ocr_agl/dictionaries/ to use medcat.")
 
 
 # load a spaCy model
