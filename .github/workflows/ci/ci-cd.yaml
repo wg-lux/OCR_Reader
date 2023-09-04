@@ -21,6 +21,9 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+      
+    - name: Navigate to Project Directory
+      run: cd OCR_Reader
     - name: Install Poetry
       run: |
         python -m pip install --upgrade pip
