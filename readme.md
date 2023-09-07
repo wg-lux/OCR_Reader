@@ -51,4 +51,7 @@ displayed.
 
 Make sure that Tesseract OCR is installed on your system and the 'TESSDATA_PREFIX' environment variable is correctly set to the directory with the Tesseract language data.
 
+Medizinische Daten werden mit MedCat klassifiziert.
+Die Erstellung erfolgt unter Verwendung der maschinenlesbaren Fassung des Bundesinstituts für Arzneimittel und Medizinprodukte (BfArM).
+
 Max Hild // AG Lux // 2023
