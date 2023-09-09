@@ -25,9 +25,11 @@ jobs:
           uses: pronovic/setup-poetry@v1.2.0
 
 
-      - name: Install dependencies
+      - name: Create and activate Poetry shell
         run: |
           poetry install
+          source $(poetry env info --path)/bin/activate
+
 
       - name: Run tests
         run: poetry run python -m unittest discover
