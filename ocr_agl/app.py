@@ -1,5 +1,3 @@
-
-
 from flask import Flask, request, jsonify
 import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
@@ -17,10 +15,11 @@ import re
 import spacy
 from spacy.tokens import Doc
 import json
+import difflib
+import string
 
 def download_model(model_name):
     spacy.cli.download(model_name)
-
 
 os.environ['TESSDATA_PREFIX'] = '/opt/homebrew/share/tessdata'
 pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
@@ -35,7 +34,6 @@ try:
     cat = CAT(cdb=cdb, vocab=vocab)
 except:
     print("No Vocab and/or CDB for Medcat Usage provided. Please save them in src/ocr_agl/dictionaries/ to use medcat.")
-
 
 # load a spaCy model
 try:
@@ -53,12 +51,12 @@ def run_script():
 
 def replace_unwanted_characters(word):
     # Erlaube nur Zeichen a-z, A-Z, ä, ü, ö, Ä, Ü, Ö, ß, 1-9, . , ' / & % ! " < > + * # ( ) € und -
-    allowed_chars = r"[^a-zA-ZäüöÄÜÖß0-9.,'/&%!\"<>+*#()\€_:-]"
+    allowed_chars = r"[^a-zA-ZäüöÄÜÖß0-9.,'`/&%!\"<>+*#()\€_:-]"
     return re.sub(allowed_chars, '', word)
 
 def correct_medical_terms_ocr_output(text):
     annotations = json.loads(cat.get_json(text))
-    
+
     # Check the content of annotations
     #print(annotations) 
     
@@ -70,6 +68,25 @@ def correct_medical_terms_ocr_output(text):
             text = text[:start] + concept_name + text[end:]
     
     return text
+
+def check_if_medical_term(text, word_to_check):
+    try:
+        annotations = json.loads(cat.get_json(text))
+        for ann in annotations['entities']:
+            concept_name = ann['name']  # Get the name of the detected concept
+            if word_to_check == concept_name:
+                return True
+    except KeyError:
+        # Handle the case where 'entities' is missing in annotations
+        pass
+    return False
+
+# Define a similarity threshold (e.g., 0.8 for 80% similarity)
+
+SIMILARITY_THRESHOLD=0.99
+    
+import difflib
+import re
 
 def spell_check(text):
     dic_file = 'dictionaries/de_DE_frami.dic'
@@ -83,15 +100,46 @@ def spell_check(text):
 
     for token in doc:
         word = replace_unwanted_characters(token.text)
-        if not h.spell(word):
+
+        # Check if the word is not a medical term and not spelled correctly
+        if not check_if_medical_term(text, word) and not h.spell(word):
             suggestions = h.suggest(word)
-            corrected_word = suggestions[0] if suggestions else word
-            corrected_words.append(corrected_word)
+
+            if suggestions:
+                # Find the suggestion with the highest similarity
+                best_suggestion = max(suggestions, key=lambda suggestion: difflib.SequenceMatcher(None, word, suggestion).ratio())
+
+                # Check if the similarity is above the threshold
+                similarity = difflib.SequenceMatcher(None, word, best_suggestion).ratio()
+                if similarity >= SIMILARITY_THRESHOLD:
+                    corrected_words.append(best_suggestion)
+                else:
+                    corrected_words.append(word)
+            else:
+                # No suggestions available, keep the original word
+                corrected_words.append(word)
         else:
             corrected_words.append(word)
 
+    # Join the corrected words with proper punctuation spacing
     corrected_text = ' '.join(corrected_words)
+
+    # Properly handle punctuation and spacing
+    corrected_text = ' '.join(corrected_text.split())  # Remove extra spaces
+    for char in string.punctuation:
+        corrected_text = corrected_text.replace(f' {char}', char)  # Remove space before punctuation
+    corrected_text = corrected_text.replace(' ,', ',')  # Remove space before comma
+
     return corrected_text
+
+def clean_newlines(text):
+    # Replace two or more consecutive "\n" characters with a single "\n"
+    cleaned_text = re.sub(r'\n{2,}', '\n', text)
+
+    # Replace remaining "\n" characters with a space
+    cleaned_text = cleaned_text.replace("\n", " ")
+
+    return cleaned_text
 
 def process_image(image, use_mock=False):
     #print("Image size:", image.size)
@@ -107,8 +155,7 @@ def process_image(image, use_mock=False):
     
     # Convert image to OpenCV format
     image = np.array(image)
-    
-    
+
     # Convert image to grayscale
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
@@ -129,16 +176,16 @@ def process_image(image, use_mock=False):
     #image = cv2.medianBlur(image, 1)
 
     # Skew correction
-    #coords = np.column_stack(np.where(image > 0))
-    #angle = cv2.minAreaRect(coords)[-1]
-    #if angle < -45:
-    #    angle = -(90 + angle)
-    #else:
-    #    angle = -angle
-    #(h, w) = image.shape[:2]
-    #center = (w // 2, h // 2)
-    #M = cv2.getRotationMatrix2D(center, angle, 1.0)
-    #image = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    coords = np.column_stack(np.where(image > 0))
+    angle = cv2.minAreaRect(coords)[-1]
+    if angle < -45:
+        angle = -(90 + angle)
+    else:
+        angle = -angle
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    image = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
 
     # Convert back to PIL.Image format
     image = Image.fromarray(image)
@@ -146,7 +193,7 @@ def process_image(image, use_mock=False):
     #enhancer = ImageEnhance.Contrast(image)
     #image = enhancer.enhance(0.9)
     sharpness = ImageEnhance.Sharpness(image)
-    image = sharpness.enhance(0.3) 
+    image = sharpness.enhance(0.2) 
     
     # Apply blurring filter
     #image = image.filter(ImageFilter.GaussianBlur(radius=0.03))
@@ -165,7 +212,6 @@ def convert_pdf_to_images(pdf_data):
         
     return images
 
-
 def scale_coordinates(coords, image_size):
     # Convert the fractional coordinates into actual pixel values
     left = coords['left'] * image_size[0]
@@ -176,15 +222,38 @@ def scale_coordinates(coords, image_size):
     
     return (left, top, right, bottom)
 
-
-
 def crop_image(image, coordinates):
     coordinates = scale_coordinates(coordinates, image.size)
     return image.crop(coordinates)
 
+def extract_coordinates(htmlwithcoords):
+    from bs4 import BeautifulSoup
 
+    soup = BeautifulSoup(htmlwithcoords, 'html.parser')
+    coordinates = []
+    for word in soup.find_all(class_='ocrx_word'):
+        bbox = word['title'].split(';')[0].split(' ')[1:]
+        left, top, right, bottom = map(int, bbox)
+        coordinates.append({'left': left, 'top': top, 'right': right, 'bottom': bottom})
+    return coordinates
+
+def process_text(extracted_text):
+    extracted_text = clean_newlines(extracted_text)
+    extracted_text = correct_medical_terms_ocr_output(extracted_text)
+    extracted_text = spell_check(extracted_text)
+    return extracted_text
+
+    
+
+def get_hocr_output(img):
+    custom_config =  r'-l deu --psm 6 --dpi 300  hocr'
+                    # Perform OCR on the image and get hOCR (coordinate) output as bytes
+    hocr_output = pytesseract.image_to_pdf_or_hocr(img, extension='hocr', config=custom_config)
+    return hocr_output
+    
 @app.route('/api_endpoint', methods=['POST'])
 def api_endpoint():
+
     try:
         # Get the File(s)
         files = request.files.getlist('image')
@@ -192,7 +261,6 @@ def api_endpoint():
         # Get the coordinates from request.form and parse them into a Python list
         coordinates_list = json.loads(request.form.get('coordinates', '[]'))
         
-
         results = []
 
         for idx, file in enumerate(files):
@@ -229,18 +297,11 @@ def api_endpoint():
                     if idx < len(coordinates_list):
                         coords = coordinates_list[idx]
                         
-                        # for debugging:
-
-                        #print("Coordinates:", coords)
-                        #print("Image size before cropping:", img.size)
-
-                        
 
                         img = crop_image(img, coords)
                         # for debugging:
 
                         #print("Image size after cropping:", img.size)
-
 
                     #print (images)
                     img = process_image(img)
@@ -248,8 +309,16 @@ def api_endpoint():
                     if img is None or img.size == (0, 0):
                         raise ValueError("Failed to convert PDF page to image")
                     text = pytesseract.image_to_string(img, lang='deu')
-                    extracted_text += text + ' '
+                    
+
+                    # Perform OCR on the image and get hOCR (coordinate) output as bytes
+
+                    hocr_output = get_hocr_output(img)
+                    coordinates=extract_coordinates(hocr_output)
+                    extracted_text += text
                     idx += 1
+                extracted_text = process_text(extracted_text)
+                
             else:
                 image = Image.open(file)
                 
@@ -258,17 +327,21 @@ def api_endpoint():
                     coords = coordinates_list[idx]
                     image = crop_image(image, coords)
 
-                image = process_image(image)
+                #image = process_image(image)
                 extracted_text = pytesseract.image_to_string(image, lang='deu')
-                extracted_text = correct_medical_terms_ocr_output(extracted_text)
-                extracted_text = spell_check(extracted_text)
+                extracted_text = process_text(extracted_text)
+
+
+                hocr_output = get_hocr_output(image)
+                coordinates = extract_coordinates(hocr_output)
 
             result = {
                 'filename': filename,
                 'file_type': file_type,
-                'extracted_text': extracted_text
+                'extracted_text': extracted_text,
+                'coordinates': coordinates
             }
-            results.append(result)
+            results.append(result) 
 
         return jsonify(results)
     except Exception as e:

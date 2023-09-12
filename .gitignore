@@ -1,1 +1,2 @@
-src/ocr_agl/dictionaries/vocab.dat
+ocr_agl/dictionaries/
+ocr_agl/tests/testfiles/
