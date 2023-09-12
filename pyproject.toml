@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "ocr-agl"
+name = "agl_ocr_reader"
 version = "1.1.0"
 description = "OCR API: This OCR API is an application for extracting text from images and PDF files. It is built using Flask, a Python web framework. It utilizes the pytesseract OCR library, pymupdf and the PIL library for image processing."
 authors = ["Max Hild <Maxhild10@gmail.com>", "Thomas Lux <lux_t1@ukw.de>"]
