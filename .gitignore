@@ -1,3 +1,5 @@
 ocr_agl/dictionaries/
 ocr_agl/tests/testfiles/
 ocr_agl/pytesseract-master
+*.whl
+*.tar
