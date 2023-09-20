@@ -44,11 +44,15 @@ Note: Make sure the app is running.
 
 # Instructions
 
-Make sure the app is running in your webborowser. Since no content is put on the homepage you will see a server error. To use the API send a request like in the request.py file, supplying your path to the image.
-displayed.
+Make sure the app is running in your webbrowser. Since no content is put on the homepage you will see a server error. To use the API send a request like in the request.py file, supplying your path to the image .
 
 # Note
 
 Make sure that Tesseract OCR is installed on your system and the 'TESSDATA_PREFIX' environment variable is correctly set to the directory with the Tesseract language data.
+
+# Rechtliches
+
+Medizinische Daten werden mit MedCat klassifiziert.
+Die Erstellung erfolgt unter Verwendung der maschinenlesbaren Fassung des Bundesinstituts für Arzneimittel und Medizinprodukte (BfArM).
 
 Max Hild // AG Lux // 2023
