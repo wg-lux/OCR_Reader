@@ -22,7 +22,7 @@ jobs:
           python-version: '3.10.8'  
 
       - name: Setup and Install Poetry
-          uses: pronovic/setup-poetry@v1.2.0
+        uses: pronovic/setup-poetry@v1.2.0
 
 
       - name: Create and activate Poetry shell
