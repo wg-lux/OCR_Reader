@@ -6,7 +6,7 @@ image_path = 'testfiles/demo-report.pdf'
 
 # Your coordinates, for example:
 coordinates = [
-    {'left': 0.0001, 'top': 0.4, 'right': 1, 'bottom': 0.9},
+    {'left': 0, 'top': 0.4, 'right': 1, 'bottom': 0.9},
     # ... more coordinates for other pages
 ]
 
